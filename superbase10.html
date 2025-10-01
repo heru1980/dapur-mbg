@@ -1,0 +1,3965 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dapur MBG - Sistem Manajemen Pemesanan dan Produksi</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* CSS Styles yang diperbaiki */
+      :root {
+        /* Green Color Palette */
+        --primary: #16a34a;        /* Green-600 */
+        --primary-light: #22c55e;  /* Green-500 */
+        --primary-lighter: #4ade80; /* Green-400 */
+        --primary-dark: #15803d;   /* Green-700 */
+        
+        /* Accent colors that complement green */
+        --accent: #eab308;         /* Yellow-500 */
+        --accent-light: #facc15;   /* Yellow-400 */
+        --accent-lighter: #fde047; /* Yellow-300 */
+        
+        /* Neutral colors */
+        --text: #1e293b;
+        --text-light: #475569;
+        --text-lighter: #64748b;
+        --bg: #f0fdf4;            /* Very light green background */
+        --card-bg: #ffffff;
+        --card-shadow: 0 2px 8px rgba(22, 163, 74, 0.08);
+        --card-shadow-hover: 0 8px 20px rgba(22, 163, 74, 0.12);
+        --border: #dcfce7;         /* Green-100 */
+        
+        /* Status colors */
+        --success: #16a34a;        /* Green-600 */
+        --warning: #d97706;        /* Amber-600 */
+        --error: #dc2626;          /* Red-600 */
+        --info: #2563eb;           /* Blue-600 */
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Inter", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      body {
+        background-color: var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+        font-weight: 400;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+      }
+
+      /* Header Styles yang diperbaiki - lebih pendek */
+      header {
+        background: linear-gradient(
+          135deg,
+          var(--primary-dark),
+          var(--primary)
+        );
+        color: white;
+        padding: 0.7rem 0;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 1.3rem;
+        font-weight: 700;
+      }
+
+      .logo-icon {
+        font-size: 1.8rem;
+      }
+
+      .logo img {
+        width: 40px;
+        height: 40px;
+        border-radius: 6px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+      }
+
+      nav ul {
+        display: flex;
+        list-style: none;
+        gap: 8px;
+      }
+
+      nav a {
+        color: white;
+        text-decoration: none;
+        padding: 6px 14px;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.95rem;
+      }
+
+      nav a:hover {
+        background-color: rgba(255, 255, 255, 0.15);
+        transform: translateY(-1px);
+      }
+
+      nav a.active {
+        background-color: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      }
+
+      .user-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .user-badge {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255, 255, 255, 0.15);
+        color: white;
+        padding: 6px 14px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      #logoutBtn {
+        border-radius: 6px;
+        padding: 6px 14px;
+        font-size: 0.85rem;
+        background-color: rgba(255, 255, 255, 0.15);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 500;
+      }
+
+      #logoutBtn:hover {
+        background-color: rgba(255, 255, 255, 0.25);
+        transform: translateY(-1px);
+      }
+
+      /* Dashboard Styles yang Dirombak */
+      .dashboard-header {
+        margin-bottom: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .dashboard-title {
+        font-size: 1.8rem;
+        color: var(--primary-dark);
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .date-filter {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: white;
+        padding: 8px 16px;
+        border-radius: 8px;
+        box-shadow: var(--card-shadow);
+        border: 1px solid var(--border);
+      }
+
+      .date-filter select {
+        border: none;
+        background: transparent;
+        font-weight: 500;
+        color: var(--text);
+        cursor: pointer;
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+
+      .stat-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.2rem;
+        box-shadow: var(--card-shadow);
+        display: flex;
+        flex-direction: column;
+        transition: all 0.3s ease;
+        border-left: 4px solid var(--primary);
+      }
+
+      .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--card-shadow-hover);
+      }
+
+      .stat-card.warning {
+        border-left-color: var(--warning);
+      }
+
+      .stat-card.success {
+        border-left-color: var(--success);
+      }
+
+      .stat-card.info {
+        border-left-color: var(--info);
+      }
+
+      .stat-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--primary-dark);
+        margin: 8px 0 4px;
+      }
+
+      .stat-label {
+        color: var(--text-light);
+        font-size: 0.9rem;
+        font-weight: 500;
+      }
+
+      .stat-change {
+        font-size: 0.8rem;
+        margin-top: 4px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .stat-change.positive {
+        color: var(--success);
+      }
+
+      .stat-change.negative {
+        color: var(--error);
+      }
+
+      .main-content {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 20px;
+      }
+
+      .chart-container {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: var(--card-shadow);
+        margin-bottom: 20px;
+      }
+
+      .chart-title {
+        margin-bottom: 1rem;
+        font-size: 1.2rem;
+        color: var(--primary-dark);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .chart-wrapper {
+        position: relative;
+        height: 300px;
+      }
+
+      .activity-list {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: var(--card-shadow);
+        max-height: 400px;
+        overflow-y: auto;
+      }
+
+      .activity-title {
+        margin-bottom: 1rem;
+        font-size: 1.2rem;
+        color: var(--primary-dark);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .activity-item {
+        padding: 12px 0;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .activity-item:last-child {
+        border-bottom: none;
+      }
+
+      .activity-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(22, 163, 74, 0.1);
+        color: var(--primary);
+        font-size: 1rem;
+      }
+
+      .activity-details {
+        flex: 1;
+      }
+
+      .activity-description {
+        font-weight: 500;
+        color: var(--text);
+      }
+
+      .activity-time {
+        font-size: 0.8rem;
+        color: var(--text-light);
+      }
+
+      .quick-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+
+      .quick-stat {
+        background: white;
+        border-radius: 10px;
+        padding: 1rem;
+        box-shadow: var(--card-shadow);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+
+      .quick-stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(22, 163, 74, 0.1);
+        color: var(--primary);
+        font-size: 1.5rem;
+        margin-bottom: 8px;
+      }
+
+      .quick-stat-value {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--primary-dark);
+        margin: 4px 0;
+      }
+
+      .quick-stat-label {
+        color: var(--text-light);
+        font-size: 0.85rem;
+      }
+
+      .recent-orders {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: var(--card-shadow);
+      }
+
+      .orders-title {
+        margin-bottom: 1rem;
+        font-size: 1.2rem;
+        color: var(--primary-dark);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .order-item {
+        padding: 12px 0;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .order-item:last-child {
+        border-bottom: none;
+      }
+
+      .order-info {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .order-school {
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .order-details {
+        font-size: 0.85rem;
+        color: var(--text-light);
+      }
+
+      .order-porsi {
+        font-weight: 600;
+        color: var(--primary);
+      }
+
+      /* Modal Styles */
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+        backdrop-filter: blur(4px);
+      }
+
+      .modal-content {
+        background-color: white;
+        padding: 2.2rem;
+        border-radius: 12px;
+        width: 100%;
+        max-width: 450px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        transform: translateY(20px);
+        opacity: 0;
+        transition: all 0.3s ease;
+      }
+
+      .modal.show .modal-content {
+        transform: translateY(0);
+        opacity: 1;
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .modal-header h2 {
+        color: var(--primary);
+        font-weight: 600;
+      }
+
+      .close-modal {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: var(--text-light);
+        transition: color 0.3s;
+      }
+
+      .close-modal:hover {
+        color: var(--text);
+      }
+
+      .tab-container {
+        display: flex;
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .tab {
+        padding: 12px 20px;
+        cursor: pointer;
+        border: none;
+        background: none;
+        flex: 1;
+        text-align: center;
+        font-weight: 500;
+        color: var(--text-light);
+        transition: all 0.3s;
+        position: relative;
+      }
+
+      .tab.active {
+        color: var(--primary);
+        font-weight: 600;
+      }
+
+      .tab.active::after {
+        content: "";
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background-color: var(--primary);
+        border-radius: 3px 3px 0 0;
+      }
+
+      .auth-form {
+        display: none;
+      }
+
+      .auth-form.active {
+        display: block;
+        animation: fadeIn 0.4s ease;
+      }
+
+      /* Page Sections */
+      .page {
+        display: none;
+        animation: fadeIn 0.5s ease-in;
+        padding: 1.5rem 0;
+      }
+
+      .page.active {
+        display: block;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Form Input */
+      .form-section {
+        background-color: var(--card-bg);
+        border-radius: 10px;
+        padding: 1.8rem;
+        box-shadow: var(--card-shadow);
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--border);
+      }
+
+      .form-title {
+        margin-bottom: 1.2rem;
+        font-size: 1.3rem;
+        color: var(--primary-dark);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 600;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .form-group {
+        margin-bottom: 1.2rem;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 6px;
+        font-weight: 500;
+        color: var(--text);
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s;
+        background-color: #fff;
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: none;
+        border-color: var(--primary-light);
+        box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.2);
+      }
+
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        gap: 12px;
+        align-items: end;
+      }
+
+      .form-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 1.2rem;
+      }
+
+      .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+
+      .btn-primary {
+        background: linear-gradient(
+          135deg,
+          var(--primary),
+          var(--primary-light)
+        );
+        color: white;
+        box-shadow: 0 4px 10px rgba(22, 163, 74, 0.3);
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 14px rgba(22, 163, 74, 0.4);
+      }
+
+      .btn-secondary {
+        background-color: #f1f5f9;
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+
+      .btn-secondary:hover {
+        background-color: #e2e8f0;
+        transform: translateY(-2px);
+      }
+
+      .btn-danger {
+        background: linear-gradient(135deg, var(--error), #b91c1c);
+        color: white;
+        box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3);
+      }
+
+      .btn-danger:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 14px rgba(220, 38, 38, 0.4);
+      }
+
+      .btn-info {
+        background: linear-gradient(135deg, var(--info), #1d4ed8);
+        color: white;
+        box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+      }
+
+      .btn-info:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 14px rgba(37, 99, 235, 0.4);
+      }
+
+      /* Table Styles */
+      .table-section {
+        background-color: var(--card-bg);
+        border-radius: 10px;
+        padding: 1.8rem;
+        box-shadow: var(--card-shadow);
+        margin-bottom: 1.5rem;
+        overflow-x: auto;
+        border: 1px solid var(--border);
+      }
+
+      .table-title {
+        margin-bottom: 1.2rem;
+        font-size: 1.3rem;
+        color: var(--primary-dark);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 600;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--border);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      th,
+      td {
+        padding: 14px 16px;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+      }
+
+      th {
+        background-color: var(--primary);
+        color: white;
+        font-weight: 600;
+        position: sticky;
+        top: 0;
+      }
+
+      tr {
+        transition: background-color 0.2s;
+      }
+
+      tr:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+      }
+
+      .action-buttons {
+        display: flex;
+        gap: 6px;
+      }
+
+      .btn-small {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+        border-radius: 6px;
+      }
+
+      /* Footer */
+      footer {
+        background: linear-gradient(
+          135deg,
+          var(--primary-dark),
+          var(--primary)
+        );
+        color: white;
+        padding: 1.5rem 0;
+        text-align: center;
+        margin-top: 2rem;
+      }
+
+      footer p {
+        opacity: 0.9;
+        font-weight: 400;
+      }
+
+      /* Filter Section */
+      .filter-section {
+        background-color: var(--card-bg);
+        border-radius: 10px;
+        padding: 1.2rem;
+        box-shadow: var(--card-shadow);
+        margin-bottom: 1.2rem;
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        border: 1px solid var(--border);
+      }
+
+      .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        flex: 1;
+        min-width: 160px;
+      }
+
+      /* Responsive */
+      @media (max-width: 1024px) {
+        .main-content {
+          grid-template-columns: 1fr;
+        }
+        
+        .stats-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      @media (max-width: 768px) {
+        .header-content {
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        nav ul {
+          flex-wrap: wrap;
+          justify-content: center;
+          gap: 4px;
+        }
+
+        .user-info {
+          width: 100%;
+          justify-content: center;
+        }
+
+        .stats-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .form-row {
+          grid-template-columns: 1fr;
+        }
+
+        .form-actions {
+          flex-direction: column;
+        }
+
+        .filter-section {
+          flex-direction: column;
+        }
+
+        .quick-stats {
+          grid-template-columns: 1fr;
+        }
+        
+        .dashboard-header {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 12px;
+        }
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      /* Additional Styling for Demo Info */
+      .demo-info {
+        margin-top: 1.2rem;
+        padding: 1rem;
+        background-color: rgba(22, 163, 74, 0.1);
+        border-radius: 8px;
+        border-left: 4px solid var(--primary);
+      }
+
+      .demo-info h4 {
+        margin-bottom: 0.5rem;
+        color: var(--primary-dark);
+      }
+
+      .demo-info p {
+        margin-bottom: 0.25rem;
+        font-size: 0.9rem;
+      }
+
+      /* tombol copy */
+      .demo-info {
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial;
+        line-height: 1.4;
+      }
+      .copy-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 8px;
+        padding: 4px;
+        border-radius: 6px;
+        border: 1px solid transparent;
+        background: transparent;
+        cursor: pointer;
+        font: inherit;
+        color: #333;
+        vertical-align: middle;
+      }
+      .copy-btn:hover {
+        background: rgba(0, 0, 0, 0.04);
+      }
+      .copy-btn svg {
+        display: block;
+      }
+      .copy-toast {
+        position: fixed;
+        bottom: 18px;
+        right: 18px;
+        background: #222;
+        color: #fff;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        opacity: 0;
+        transform: translateY(8px);
+        transition: opacity 0.18s ease, transform 0.18s ease;
+        pointer-events: none;
+        z-index: 9999;
+      }
+
+      /* Mobile Header Styles */
+      @media (max-width: 768px) {
+        /* Header utama */
+        header {
+            padding: 0.5rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-content {
+            flex-direction: column;
+            gap: 12px;
+            padding: 0 15px;
+        }
+
+        /* Logo section */
+        .logo {
+            width: 100%;
+            justify-content: center;
+            font-size: 1.1rem;
+            gap: 8px;
+        }
+
+        .logo img {
+            width: 35px;
+            height: 35px;
+        }
+
+        .logo-icon {
+            font-size: 1.4rem;
+        }
+
+        /* Navigation */
+        nav {
+            width: 100%;
+            order: 3;
+        }
+
+        nav ul {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+            width: 100%;
+        }
+
+        nav li {
+            text-align: center;
+        }
+
+        nav a {
+            flex-direction: column;
+            padding: 8px 5px;
+            font-size: 0.75rem;
+            gap: 4px;
+            border-radius: 8px;
+            text-align: center;
+            min-height: 50px;
+            justify-content: center;
+        }
+
+        nav a span {
+            font-size: 1.1rem;
+        }
+
+        /* User info section */
+        .user-info {
+            width: 100%;
+            justify-content: space-between;
+            order: 2;
+            gap: 10px;
+        }
+
+        .user-badge {
+            flex: 1;
+            justify-content: center;
+            padding: 8px 12px;
+            font-size: 0.8rem;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        #logoutBtn {
+            padding: 8px 16px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+
+        /* Active state untuk mobile */
+        nav a.active {
+            background-color: rgba(255, 255, 255, 0.25);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            transform: scale(0.95);
+        }
+
+        /* Hover effects untuk devices yang support hover */
+        @media (hover: hover) {
+            nav a:hover {
+                background-color: rgba(255, 255, 255, 0.2);
+                transform: translateY(-2px);
+            }
+            
+            #logoutBtn:hover {
+                background-color: rgba(255, 255, 255, 0.3);
+                transform: translateY(-1px);
+            }
+        }
+      }
+
+      /* Small Mobile Devices (max-width: 480px) */
+      @media (max-width: 480px) {
+        .header-content {
+            gap: 10px;
+            padding: 0 10px;
+        }
+
+        .logo {
+            font-size: 1rem;
+        }
+
+        .logo img {
+            width: 30px;
+            height: 30px;
+        }
+
+        nav ul {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 4px;
+        }
+
+        nav a {
+            font-size: 0.7rem;
+            min-height: 45px;
+            padding: 6px 4px;
+        }
+
+        nav a span {
+            font-size: 1rem;
+        }
+
+        .user-info {
+            flex-wrap: wrap;
+        }
+
+        .user-badge {
+            font-size: 0.75rem;
+            padding: 6px 8px;
+        }
+
+        #logoutBtn {
+            padding: 6px 12px;
+            font-size: 0.75rem;
+        }
+
+        /* Sembunyikan teks panjang di user badge pada mobile sangat kecil */
+        .user-badge span {
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+      }
+
+      /* Very Small Mobile Devices (max-width: 360px) */
+      @media (max-width: 360px) {
+        nav ul {
+            grid-template-columns: 1fr;
+        }
+
+        nav a {
+            min-height: 40px;
+            flex-direction: row;
+            justify-content: flex-start;
+            padding: 8px 12px;
+            font-size: 0.8rem;
+        }
+
+        .user-info {
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .user-badge, #logoutBtn {
+            width: 100%;
+            text-align: center;
+        }
+      }
+
+      /* Landscape Mode untuk Mobile */
+      @media (max-width: 768px) and (orientation: landscape) {
+        .header-content {
+            flex-direction: row;
+            flex-wrap: wrap;
+        }
+
+        .logo {
+            width: auto;
+            order: 1;
+        }
+
+        .user-info {
+            width: auto;
+            order: 2;
+            margin-left: auto;
+        }
+
+        nav {
+            order: 3;
+            width: 100%;
+            margin-top: 5px;
+        }
+
+        nav ul {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        nav a {
+            min-height: 40px;
+            padding: 5px 3px;
+        }
+      }
+
+      /* Touch Device Optimizations */
+      @media (max-width: 768px) and (pointer: coarse) {
+        nav a {
+            min-height: 44px; /* Minimum touch target size */
+        }
+        
+        #logoutBtn {
+            min-height: 44px;
+            min-width: 60px;
+        }
+        
+        /* Increase tap target sizes */
+        .user-badge {
+            min-height: 44px;
+        }
+      }
+
+      /* Smooth transitions untuk mobile */
+      @media (max-width: 768px) {
+        header {
+            transition: all 0.3s ease;
+        }
+        
+        .header-content {
+            transition: all 0.3s ease;
+        }
+        
+        nav a {
+            transition: all 0.2s ease;
+        }
+        
+        #logoutBtn {
+            transition: all 0.2s ease;
+        }
+      }
+
+      /* Sticky header shadow effect untuk mobile */
+      @media (max-width: 768px) {
+        header {
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+      }
+
+      /* Table Header dengan Actions */
+      .table-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 1.5rem;
+          flex-wrap: wrap;
+          gap: 1rem;
+      }
+
+      .table-actions {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+      }
+
+      /* Tombol Success (hijau) */
+      .btn-success {
+          background: linear-gradient(135deg, #16a34a, #22c55e);
+          color: white;
+          box-shadow: 0 4px 10px rgba(22, 163, 74, 0.3);
+      }
+
+      .btn-success:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 14px rgba(22, 163, 74, 0.4);
+      }
+
+      /* Loading state untuk export */
+      .btn-loading {
+          position: relative;
+          color: transparent;
+      }
+
+      .btn-loading::after {
+          content: "";
+          position: absolute;
+          width: 16px;
+          height: 16px;
+          top: 50%;
+          left: 50%;
+          margin-left: -8px;
+          margin-top: -8px;
+          border: 2px solid #ffffff;
+          border-radius: 50%;
+          border-top-color: transparent;
+          animation: spin 1s ease-in-out infinite;
+      }
+
+      @keyframes spin {
+          to { transform: rotate(360deg); }
+      }
+
+      /* Responsive table actions */
+      @media (max-width: 768px) {
+          .table-header {
+              flex-direction: column;
+              align-items: flex-start;
+          }
+          
+          .table-actions {
+              width: 100%;
+              justify-content: flex-start;
+          }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Modal untuk Login/Register -->
+    <div id="authModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Dapur MBG</h2>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="tab-container">
+          <button class="tab active" data-tab="login">Login</button>
+        </div>
+        <form id="loginForm" class="auth-form active">
+          <div class="form-group">
+            <label for="loginEmail">Email</label>
+            <input type="email" id="loginEmail" required />
+          </div>
+          <div class="form-group">
+            <label for="loginPassword">Password</label>
+            <input type="password" id="loginPassword" required />
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="loginSubmitBtn">
+              <span id="loginBtnText">Login</span>
+            </button>
+          </div>
+          <!-- HTML: ganti sesuai kebutuhan -->
+          <div class="demo-info">
+            <h4>Demo Admin</h4>
+            <p>
+              user :
+              <span class="cred">admin@dapurmbg.com</span>
+              <button class="copy-btn" aria-label="Copy user" title="Copy user">
+                <!-- simple copy SVG icon -->
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M16 1H4a2 2 0 0 0-2 2v12"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <rect
+                    x="8"
+                    y="5"
+                    width="13"
+                    height="13"
+                    rx="2"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </p>
+
+            <p>
+              pass :
+              <span class="cred">admin123</span>
+              <button
+                class="copy-btn"
+                aria-label="Copy password"
+                title="Copy password"
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M16 1H4a2 2 0 0 0-2 2v12"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <rect
+                    x="8"
+                    y="5"
+                    width="13"
+                    height="13"
+                    rx="2"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </p>
+
+            <hr />
+
+            <h4>Demo Sekolah</h4>
+
+            <p>
+              user :
+              <span class="cred">sdn1danakerta@dapurmbg.com</span>
+              <button class="copy-btn" aria-label="Copy user" title="Copy user">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M16 1H4a2 2 0 0 0-2 2v12"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <rect
+                    x="8"
+                    y="5"
+                    width="13"
+                    height="13"
+                    rx="2"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </p>
+
+            <p>
+              pass :
+              <span class="cred">000000</span>
+              <button
+                class="copy-btn"
+                aria-label="Copy password"
+                title="Copy password"
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M16 1H4a2 2 0 0 0-2 2v12"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <rect
+                    x="8"
+                    y="5"
+                    width="13"
+                    height="13"
+                    rx="2"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </p>
+
+            <p>
+              user :
+              <span class="cred">sdn2danakerta@dapurmbg.com</span>
+              <button class="copy-btn" aria-label="Copy user" title="Copy user">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M16 1H4a2 2 0 0 0-2 2v12"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <rect
+                    x="8"
+                    y="5"
+                    width="13"
+                    height="13"
+                    rx="2"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </p>
+
+            <p>
+              pass :
+              <span class="cred">000000</span>
+              <button
+                class="copy-btn"
+                aria-label="Copy password"
+                title="Copy password"
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M16 1H4a2 2 0 0 0-2 2v12"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <rect
+                    x="8"
+                    y="5"
+                    width="13"
+                    height="13"
+                    rx="2"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </p>
+
+            <a
+              target="_blank"
+              href="https://docs.google.com/document/d/1IQnwbfjQQH-B_C4fjgjZzrYNB-rmdVPf7Mzmh6swm90/edit?usp=sharing"
+              >Tutorial</a
+            >
+
+            <!-- small transient message shown after copy -->
+            <div
+              id="copy-toast"
+              role="status"
+              aria-live="polite"
+              class="copy-toast"
+            >
+              Copied!
+            </div>
+          </div>
+        </form>
+        <div id="authMessage" class="form-group"></div>
+      </div>
+    </div>
+
+    <!-- Aplikasi Utama (ditampilkan setelah login) -->
+    <div id="app" class="hidden">
+      <header>
+        <div class="container">
+          <div class="header-content">
+            <div class="logo">
+              <span
+                ><img
+                  src="assets/img/Logo_Badan_Gizi_Nasional.png"
+                  alt="Logo Dapur MBG"
+              /></span>
+              <span>Dapur MBG</span>
+            </div>
+            <nav>
+              <ul>
+                <li>
+                  <a href="#" class="nav-link active" data-page="dashboard"
+                    >📊 Dashboard</a
+                  >
+                </li>
+                <li>
+                  <a href="#" class="nav-link" data-page="pesanan"
+                    >📝 Pesanan</a
+                  >
+                </li>
+                <li id="resepNavItem">
+                  <a href="#" class="nav-link" data-page="resep">🍳 Resep</a>
+                </li>
+                <li id="laporanNavItem">
+                  <a href="#" class="nav-link" data-page="laporan"
+                    >📈 Laporan</a
+                  >
+                </li>
+                <li id="usersNavItem">
+                  <a href="#" class="nav-link" data-page="users">👥 Users</a>
+                </li>
+              </ul>
+            </nav>
+            <div class="user-info">
+              <div class="user-badge">
+                <span id="userEmail">SEKOLAH</span>
+              </div>
+              <button id="logoutBtn">
+                <span id="logoutBtnText">Logout</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="container">
+        <!-- Dashboard Page yang Dirombak -->
+        <section id="dashboard" class="page active">
+          <div class="dashboard-header">
+            <h1 class="dashboard-title">📊 Dashboard Produksi</h1>
+            <div class="date-filter">
+              <span>Periode:</span>
+              <select id="periodFilter">
+                <option value="today">Hari Ini</option>
+                <option value="week">Minggu Ini</option>
+                <option value="month">Bulan Ini</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Stats Grid -->
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-label">Total Sekolah</div>
+              <div class="stat-value" id="total-sekolah">0</div>
+              <div class="stat-change positive">
+                <span>+5%</span> dari kemarin
+              </div>
+            </div>
+            <div class="stat-card success">
+              <div class="stat-label">Total Porsi</div>
+              <div class="stat-value" id="total-porsi">0</div>
+              <div class="stat-change positive">
+                <span>+12%</span> dari kemarin
+              </div>
+            </div>
+            <div class="stat-card info">
+              <div class="stat-label">Menu Terlaris</div>
+              <div class="stat-value" id="menu-terlaris">-</div>
+              <div class="stat-change">
+                <span id="menu-porsi">0 porsi</span>
+              </div>
+            </div>
+            <div class="stat-card warning">
+              <div class="stat-label">Kebutuhan Bahan</div>
+              <div class="stat-value" id="total-bahan">0</div>
+              <div class="stat-change">
+                <span id="bahan-jenis">0 jenis</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Content Grid -->
+          <div class="main-content">
+            <!-- Left Column -->
+            <div>
+              <!-- Production Chart -->
+              <div class="chart-container">
+                <h3 class="chart-title">📈 Tren Produksi Harian</h3>
+                <div class="chart-wrapper">
+                  <canvas id="produksiChart"></canvas>
+                </div>
+              </div>
+
+              <!-- Recent Orders -->
+              <div class="recent-orders">
+                <h3 class="orders-title">📋 Pesanan Terbaru</h3>
+                <div id="recent-orders-list">
+                  <!-- Data akan diisi oleh JavaScript -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column -->
+            <div>
+              <!-- Quick Stats -->
+              <div class="quick-stats">
+                <div class="quick-stat">
+                  <div class="quick-stat-icon">🍽️</div>
+                  <div class="quick-stat-value" id="avg-porsi">0</div>
+                  <div class="quick-stat-label">Rata-rata Porsi</div>
+                </div>
+                <div class="quick-stat">
+                  <div class="quick-stat-icon">🏫</div>
+                  <div class="quick-stat-value" id="active-schools">0</div>
+                  <div class="quick-stat-label">Sekolah Aktif</div>
+                </div>
+                <div class="quick-stat">
+                  <div class="quick-stat-icon">📅</div>
+                  <div class="quick-stat-value" id="days-remaining">0</div>
+                  <div class="quick-stat-label">Hari dalam Bulan</div>
+                </div>
+                <div class="quick-stat">
+                  <div class="quick-stat-icon">💰</div>
+                  <div class="quick-stat-value" id="efficiency">0%</div>
+                  <div class="quick-stat-label">Efisiensi</div>
+                </div>
+              </div>
+
+              <!-- Activity Feed -->
+              <div class="activity-list">
+                <h3 class="activity-title">🔔 Aktivitas Terbaru</h3>
+                <div id="activity-feed">
+                  <!-- Data akan diisi oleh JavaScript -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Pesanan Page -->
+        <section id="pesanan" class="page">
+          <section class="form-section">
+            <h3 class="form-title"><span>📝</span> Form Input Pesanan</h3>
+            <form id="pesanan-form">
+              <div class="form-group">
+                <!-- <label for="sekolah">Nama Sekolah</label> -->
+                <input type="hidden" id="sekolah" name="sekolah" required />
+                <div
+                  id="sekolah-display"
+                  style="
+                    font-weight: bold;
+                    color: var(--primary-dark);
+                    padding: 10px 14px;
+                    background-color: rgba(22, 163, 74, 0.1);
+                    border-radius: 8px;
+                  "
+                ></div>
+              </div>
+              <div class="form-group">
+                <label for="menu">Menu</label>
+                <select id="menu" name="menu" required>
+                  <option value="">Pilih Menu</option>
+                  <!-- Options akan diisi oleh JavaScript -->
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="porsi">Jumlah Porsi</label>
+                <input type="number" id="porsi" name="porsi" min="1" required />
+              </div>
+              <div class="form-group">
+                <label for="tanggal">Tanggal Pesanan</label>
+                <input type="date" id="tanggal" name="tanggal" required />
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                  Simpan Pesanan
+                </button>
+                <button
+                  type="button"
+                  id="btn-reset-pesanan"
+                  class="btn btn-secondary"
+                >
+                  Reset
+                </button>
+              </div>
+            </form>
+          </section>
+          <!-- Tabel Pesanan -->
+          <section class="table-section">
+            <div class="table-header">
+              <h3 class="table-title"><span>📋</span> Daftar Pesanan</h3>
+              <div class="table-actions">
+                <button id="exportExcelBtn" class="btn btn-success">
+                  📊 Export Excel
+                </button>
+              </div>
+            </div>
+            <table id="tabel-pesanan">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Tanggal</th>
+                  <th>Sekolah</th>
+                  <th>Menu</th>
+                  <th>Porsi</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-pesanan">
+                <!-- Data akan diisi oleh JavaScript -->
+              </tbody>
+            </table>
+          </section>
+        </section>
+
+        <!-- Resep Page -->
+        <section id="resep" class="page">
+          <section class="form-section">
+            <h3 class="form-title"><span>📋</span> Form Input Resep</h3>
+            <form id="resep-form">
+              <div class="form-group">
+                <label for="nama-resep">Nama Resep/Menu</label>
+                <input type="text" id="nama-resep" name="nama-resep" required />
+              </div>
+
+              <div class="form-group">
+                <label>Bahan-bahan:</label>
+                <div id="bahan-container">
+                  <!-- Bahan akan ditambahkan dinamis -->
+                </div>
+                <button
+                  type="button"
+                  id="btn-tambah-bahan"
+                  class="btn btn-secondary"
+                >
+                  + Tambah Bahan
+                </button>
+              </div>
+
+              <div class="form-group">
+                <label for="catatan-resep">Catatan/Cara Membuat</label>
+                <textarea
+                  id="catatan-resep"
+                  name="catatan-resep"
+                  rows="3"
+                ></textarea>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                  Simpan Resep
+                </button>
+                <button
+                  type="button"
+                  id="btn-reset-resep"
+                  class="btn btn-secondary"
+                >
+                  Reset
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <!-- Tabel Resep -->
+          <section class="table-section">
+            <h3 class="table-title"><span>🍳</span> Daftar Resep</h3>
+            <table id="tabel-resep">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Nama Menu</th>
+                  <th>Jumlah Bahan</th>
+                  <th>Catatan</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-resep">
+                <!-- Data akan diisi oleh JavaScript -->
+              </tbody>
+            </table>
+          </section>
+        </section>
+
+        <!-- Laporan Page -->
+        <section id="laporan" class="page">
+          <section class="kpi-section">
+            <h2 class="kpi-title"><span>📈</span> Laporan Produksi</h2>
+
+            <div class="filter-section">
+              <div class="filter-group">
+                <label for="laporan-tanggal-awal">Tanggal Awal</label>
+                <input type="date" id="laporan-tanggal-awal" />
+              </div>
+              <div class="filter-group">
+                <label for="laporan-tanggal-akhir">Tanggal Akhir</label>
+                <input type="date" id="laporan-tanggal-akhir" />
+              </div>
+              <div class="filter-group">
+                <label>&nbsp;</label>
+                <button id="btn-generate-laporan" class="btn btn-primary">
+                  Generate Laporan
+                </button>
+              </div>
+            </div>
+
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-label">Periode Laporan</div>
+                <div class="stat-value" id="laporan-periode">7 Hari</div>
+                <div class="stat-change">
+                  <span id="laporan-range">-</span>
+                </div>
+              </div>
+              <div class="stat-card success">
+                <div class="stat-label">Total Sekolah</div>
+                <div class="stat-value" id="laporan-total-sekolah">0</div>
+                <div class="stat-change">
+                  <span id="laporan-sekolah-change">0%</span>
+                </div>
+              </div>
+              <div class="stat-card info">
+                <div class="stat-label">Total Porsi</div>
+                <div class="stat-value" id="laporan-total-porsi">0</div>
+                <div class="stat-change">
+                  <span id="laporan-porsi-change">0%</span>
+                </div>
+              </div>
+              <div class="stat-card warning">
+                <div class="stat-label">Rata-rata per Hari</div>
+                <div class="stat-value" id="laporan-ratarata">0</div>
+                <div class="stat-change">
+                  <span id="laporan-avg-change">0%</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="charts-section">
+            <div class="chart-container">
+              <h3 class="chart-title"><span>📊</span> Tren Produksi Harian</h3>
+              <div class="chart-wrapper">
+                <canvas id="trenChart"></canvas>
+              </div>
+            </div>
+            <div class="chart-container">
+              <h3 class="chart-title"><span>📈</span> Perbandingan Menu</h3>
+              <div class="chart-wrapper">
+                <canvas id="perbandinganChart"></canvas>
+              </div>
+            </div>
+          </section>
+
+          <section class="table-section">
+            <h3 class="table-title"><span>📋</span> Detail Laporan Produksi</h3>
+            <table id="tabel-laporan">
+              <thead>
+                <tr>
+                  <th>Tanggal</th>
+                  <th>Jumlah Sekolah</th>
+                  <th>Total Porsi</th>
+                  <th>Menu Terpopuler</th>
+                  <th>Rata-rata per Sekolah</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-laporan">
+                <!-- Data akan diisi oleh JavaScript -->
+              </tbody>
+            </table>
+          </section>
+        </section>
+
+        <!-- Users Page -->
+        <section id="users" class="page">
+          <section class="form-section">
+            <h3 class="form-title"><span>👥</span> Register User Baru</h3>
+            <form id="register-user-form">
+              <div class="form-group">
+                <label for="register-user-email">Email</label>
+                <input type="email" id="register-user-email" required />
+              </div>
+              <div class="form-group">
+                <label for="register-user-password">Password</label>
+                <input type="password" id="register-user-password" required />
+              </div>
+              <div class="form-group">
+                <label for="register-user-role">Role</label>
+                <select id="register-user-role" required>
+                  <option value="">Pilih Role</option>
+                  <option value="sekolah">Sekolah</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                  Register User
+                </button>
+                <button
+                  type="button"
+                  id="btn-reset-user"
+                  class="btn btn-secondary"
+                >
+                  Reset
+                </button>
+              </div>
+            </form>
+            <div id="register-user-message" class="form-group"></div>
+          </section>
+
+          <!-- Tabel Users -->
+          <section class="table-section">
+            <h3 class="table-title"><span>👥</span> Daftar Users</h3>
+            <table id="tabel-users">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Tanggal Dibuat</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-users">
+                <!-- Data akan diisi oleh JavaScript -->
+              </tbody>
+            </table>
+          </section>
+        </section>
+      </main>
+
+      <footer>
+        <div class="container">
+          <p>
+            Dapur MBG &copy; 2025 - Sistem Manajemen Produksi dan Kebutuhan
+            Bahan
+          </p>
+        </div>
+      </footer>
+    </div>
+
+    <script>
+      // Konfigurasi Supabase
+      const SUPABASE_URL = "https://yyfjiryunxogelitoyuz.supabase.co";
+      const SUPABASE_ANON_KEY =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5Zmppcnl1bnhvZ2VsaXRveXV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4NjkzMjEsImV4cCI6MjA3NDQ0NTMyMX0.7RxYw26P6IFRekdXQoT9I3Aip1r8gqbuhiBFNPCYAB4";
+
+      // Inisialisasi Supabase client
+      const supabase = window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_ANON_KEY
+      );
+
+      // Variabel global untuk menyimpan data dan state aplikasi
+      let currentUser = null;
+      let currentUserRole = null;
+      let pesananData = [];
+      let resepData = [];
+      let usersData = [];
+      let editingPesananId = null;
+      let editingResepId = null;
+
+      // Chart instances
+      let produksiChart, trenChart, perbandinganChart;
+
+      // Event listener untuk sebelum unload (refresh/close tab)
+      window.addEventListener('beforeunload', function() {
+        // Simpan state login ke sessionStorage
+        if (currentUser) {
+          sessionStorage.setItem('dapurmbg_user', JSON.stringify({
+            email: currentUser.email,
+            role: currentUserRole,
+            lastActivity: new Date().getTime()
+          }));
+        }
+      });
+
+      // Fungsi untuk inisialisasi aplikasi
+      async function initApp() {
+        try {
+          console.log('Menginisialisasi aplikasi...');
+          
+          // Cek session storage untuk state login
+          const savedUser = sessionStorage.getItem('dapurmbg_user');
+          if (savedUser) {
+            const userData = JSON.parse(savedUser);
+            // Cek jika session masih valid (kurang dari 1 jam)
+            const timeDiff = new Date().getTime() - userData.lastActivity;
+            if (timeDiff < 60 * 60 * 1000) { // 1 jam
+              console.log('Menggunakan session yang tersimpan');
+              // Gunakan data yang disimpan sambil menunggu verifikasi dari Supabase
+              currentUser = { email: userData.email };
+              currentUserRole = userData.role;
+              document.getElementById('userEmail').textContent = userData.email.split('@')[0].toUpperCase();
+              showApp();
+            }
+          }
+
+          // Cek apakah user sudah login dengan Supabase
+          const {
+            data: { session },
+            error: sessionError
+          } = await supabase.auth.getSession();
+
+          if (sessionError) {
+            console.error('Error mendapatkan session:', sessionError);
+          }
+
+          if (session) {
+            // User sudah login, tampilkan aplikasi utama
+            console.log('Session ditemukan:', session.user.email);
+            currentUser = session.user;
+            await loadUserProfile();
+            showApp();
+          } else {
+            // User belum login, tampilkan modal login
+            console.log('Tidak ada session, menampilkan modal login');
+            showAuthModal();
+          }
+
+          // Setup event listeners untuk auth modal
+          setupAuthModal();
+
+          // Setup event listener untuk logout - PASTIKAN HANYA DIPASANG SEKALI
+          const logoutBtn = document.getElementById("logoutBtn");
+          // Hapus event listener yang mungkin sudah ada
+          logoutBtn.replaceWith(logoutBtn.cloneNode(true));
+          // Pasang event listener baru
+          document.getElementById("logoutBtn").addEventListener("click", handleLogout);
+
+          // Setup auth state change listener
+          supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log('Auth state changed:', event);
+            if (event === 'SIGNED_IN' && session) {
+              currentUser = session.user;
+              await loadUserProfile();
+              showApp();
+            } else if (event === 'SIGNED_OUT') {
+              currentUser = null;
+              currentUserRole = null;
+              sessionStorage.removeItem('dapurmbg_user');
+              showAuthModal();
+            }
+          });
+
+        } catch (error) {
+          console.error("Error in initApp:", error);
+          showAuthModal();
+        }
+      }
+
+      // Fungsi untuk memuat profil user dari database
+      async function loadUserProfile() {
+        try {
+          const { data, error } = await supabase
+            .from("users")
+            .select("role")
+            .eq("id", currentUser.id)
+            .single();
+
+          if (error) {
+            console.error("Error loading user profile:", error);
+            throw error;
+          }
+
+          currentUserRole = data.role;
+          // tampilkan email tanpa domain
+          const userEmail = document.getElementById("userEmail");
+          userEmail.textContent = currentUser.email.split("@")[0];
+          userEmail.style.textTransform = "uppercase";
+          userEmail.style.fontWeight = "bold";
+
+          // ✅ Atur tampilan menu berdasarkan role
+          if (currentUserRole === "sekolah") {
+            // 🔒 Sekolah tidak boleh lihat Dashboard, Resep, Laporan, Users
+            document
+              .querySelector('[data-page="dashboard"]')
+              .parentElement.classList.add("hidden");
+            document.getElementById("resepNavItem").classList.add("hidden");
+            document.getElementById("laporanNavItem").classList.add("hidden");
+            document.getElementById("usersNavItem").classList.add("hidden");
+
+            // Pastikan tombol Pesanan muncul
+            document
+              .querySelector('[data-page="pesanan"]')
+              .parentElement.classList.remove("hidden");
+          } else if (currentUserRole === "admin") {
+            // 🔒 Admin tidak boleh lihat Pesanan
+            document
+              .querySelector('[data-page="pesanan"]')
+              .parentElement.classList.add("hidden");
+
+            // Pastikan menu lainnya muncul
+            document
+              .querySelector('[data-page="dashboard"]')
+              .parentElement.classList.remove("hidden");
+            document.getElementById("resepNavItem").classList.remove("hidden");
+            document
+              .getElementById("laporanNavItem")
+              .classList.remove("hidden");
+            document.getElementById("usersNavItem").classList.remove("hidden");
+          }
+        } catch (error) {
+          console.error("Error in loadUserProfile:", error);
+          throw error;
+        }
+      }
+
+      // Fungsi untuk menampilkan aplikasi utama
+      function showApp() {
+        try {
+          console.log('Menampilkan aplikasi utama...');
+          document.getElementById("authModal").style.display = "none";
+          document.getElementById("app").classList.remove("hidden");
+
+          // Setup navigasi dan UI
+          setupNavigation();
+          setupResepForm();
+          setupUserForm();
+
+          // Set tanggal default untuk form pesanan
+          if (document.getElementById("tanggal")) {
+            document.getElementById("tanggal").value = new Date()
+              .toISOString()
+              .split("T")[0];
+          }
+
+          // Load data dari Supabase
+          loadResepData();
+          loadPesananData();
+          loadUsersData();
+
+          // ✅ Otomatis isi nama sekolah dari email login
+          isiNamaSekolahOtomatis();
+
+          // ✅ Kalau sekolah, langsung tampilkan halaman pesanan sebagai aktif
+          if (currentUserRole === "sekolah") {
+            document
+              .querySelectorAll(".page")
+              .forEach((p) => p.classList.remove("active"));
+            document.getElementById("pesanan").classList.add("active");
+
+            document
+              .querySelectorAll(".nav-link")
+              .forEach((l) => l.classList.remove("active"));
+            document
+              .querySelector('[data-page="pesanan"]')
+              .classList.add("active");
+          }
+
+          // ✅ Jika admin → pastikan Dashboard tetap aktif
+          if (currentUserRole === "admin") {
+            document
+              .querySelectorAll(".page")
+              .forEach((p) => p.classList.remove("active"));
+            document.getElementById("dashboard").classList.add("active");
+
+            document
+              .querySelectorAll(".nav-link")
+              .forEach((l) => l.classList.remove("active"));
+            document
+              .querySelector('[data-page="dashboard"]')
+              .classList.add("active");
+
+            loadDaftarSekolah();
+          }
+
+          // Setup filter periode
+          const periodFilter = document.getElementById("periodFilter");
+          if (periodFilter) {
+            periodFilter.addEventListener("change", updateDashboard);
+          }
+
+          // Setup filter laporan
+          setupFilterLaporan();
+
+          // Setup export buttons
+          setupExportButtons();
+
+          // Simpan state login
+          if (currentUser) {
+            sessionStorage.setItem('dapurmbg_user', JSON.stringify({
+              email: currentUser.email,
+              role: currentUserRole,
+              lastActivity: new Date().getTime()
+            }));
+          }
+
+        } catch (error) {
+          console.error("Error in showApp:", error);
+        }
+      }
+
+      // 🆕 Fungsi isi otomatis nama sekolah
+      function isiNamaSekolahOtomatis() {
+        if (currentUser && currentUserRole === "sekolah") {
+          const namaSekolah = currentUser.email.split("@")[0].toUpperCase();
+
+          // isi hidden input
+          const sekolahInput = document.getElementById("sekolah");
+          if (sekolahInput) {
+            sekolahInput.value = namaSekolah;
+          }
+
+          // isi display label
+          const sekolahDisplay = document.getElementById("sekolah-display");
+          if (sekolahDisplay) {
+            sekolahDisplay.textContent = namaSekolah;
+          }
+        }
+      }
+
+      // Fungsi untuk menampilkan modal auth
+      function showAuthModal() {
+        console.log('Menampilkan modal auth...');
+        const modal = document.getElementById("authModal");
+        modal.style.display = "flex";
+        setTimeout(() => {
+          modal.classList.add("show");
+        }, 10);
+        document.getElementById("app").classList.add("hidden");
+        
+        // Hapus state login dari session storage
+        sessionStorage.removeItem('dapurmbg_user');
+      }
+
+      // Fungsi untuk setup modal auth
+      function setupAuthModal() {
+        const modal = document.getElementById("authModal");
+        const closeBtn = document.querySelector(".close-modal");
+        const tabs = document.querySelectorAll(".tab");
+        const authForms = document.querySelectorAll(".auth-form");
+
+        // Event listener untuk tutup modal
+        closeBtn.addEventListener("click", () => {
+          modal.classList.remove("show");
+          setTimeout(() => {
+            modal.style.display = "none";
+          }, 300);
+        });
+
+        // Event listener untuk klik di luar modal
+        window.addEventListener("click", (e) => {
+          if (e.target === modal) {
+            modal.classList.remove("show");
+            setTimeout(() => {
+              modal.style.display = "none";
+            }, 300);
+          }
+        });
+
+        // Event listener untuk tab
+        tabs.forEach((tab) => {
+          tab.addEventListener("click", () => {
+            const tabName = tab.getAttribute("data-tab");
+
+            // Aktifkan tab yang diklik
+            tabs.forEach((t) => t.classList.remove("active"));
+            tab.classList.add("active");
+
+            // Tampilkan form yang sesuai
+            authForms.forEach((form) => {
+              form.classList.remove("active");
+              if (form.id === `${tabName}Form`) {
+                form.classList.add("active");
+              }
+            });
+
+            // Reset pesan error
+            document.getElementById("authMessage").textContent = "";
+          });
+        });
+
+        // Event listener untuk form login
+        document
+          .getElementById("loginForm")
+          .addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const email = document.getElementById("loginEmail").value;
+            const password = document.getElementById("loginPassword").value;
+
+            // Tampilkan loading state
+            const loginBtn = document.getElementById("loginSubmitBtn");
+            const loginBtnText = document.getElementById("loginBtnText");
+            
+            loginBtn.disabled = true;
+            loginBtnText.textContent = "Logging in...";
+
+            try {
+              const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+              });
+
+              if (error) {
+                document.getElementById("authMessage").textContent =
+                  error.message;
+                document.getElementById("authMessage").style.color = "red";
+              } else {
+                currentUser = data.user;
+                await loadUserProfile();
+                showApp();
+              }
+            } catch (error) {
+              console.error("Login error:", error);
+              document.getElementById("authMessage").textContent =
+                "Terjadi kesalahan saat login";
+              document.getElementById("authMessage").style.color = "red";
+            } finally {
+              // Reset loading state
+              loginBtn.disabled = false;
+              loginBtnText.textContent = "Login";
+            }
+          });
+      }
+
+      // Fungsi untuk handle logout - DIPERBAIKI
+      async function handleLogout() {
+        console.log('Memproses logout...');
+        
+        // Tampilkan loading state
+        const logoutBtn = document.getElementById("logoutBtn");
+        const logoutBtnText = document.getElementById("logoutBtnText");
+        
+        logoutBtn.disabled = true;
+        logoutBtnText.textContent = "Logging out...";
+
+        try {
+          const { error } = await supabase.auth.signOut();
+          if (error) {
+            console.error("Logout error:", error);
+            alert("Terjadi kesalahan saat logout: " + error.message);
+          } else {
+            console.log('Logout berhasil');
+            currentUser = null;
+            currentUserRole = null;
+            
+            // Hapus state login dari session storage
+            sessionStorage.removeItem('dapurmbg_user');
+            
+            // Tampilkan modal login
+            showAuthModal();
+          }
+        } catch (error) {
+          console.error("Logout error:", error);
+          alert("Terjadi kesalahan saat logout");
+        } finally {
+          // Reset loading state
+          logoutBtn.disabled = false;
+          logoutBtnText.textContent = "Logout";
+        }
+      }
+
+      // 🔥 Fungsi untuk memuat daftar sekolah yang sudah memesan
+      async function loadDaftarSekolah() {
+        try {
+          const { data, error } = await supabase
+            .from("pesanan")
+            .select("sekolah, menu, porsi, tanggal")
+            .order("tanggal", { ascending: false });
+
+          if (error) {
+            console.error("Gagal memuat data:", error);
+            return;
+          }
+
+          const tbody = document.getElementById("tbody-bahan");
+          if (tbody) {
+            tbody.innerHTML = "";
+
+            if (data && data.length > 0) {
+              data.forEach((item, index) => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                  <td>${index + 1}</td>
+                  <td>${
+                    item.tanggal
+                      ? new Date(item.tanggal).toLocaleDateString("id-ID")
+                      : "-"
+                  }</td>
+                  <td>${item.sekolah}</td>
+                  <td>${item.menu}</td>
+                  <td>${item.porsi}</td>
+                `;
+                tbody.appendChild(tr);
+              });
+            } else {
+              tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">Tidak ada data pesanan</td></tr>`;
+            }
+          }
+        } catch (error) {
+          console.error("Error in loadDaftarSekolah:", error);
+        }
+      }
+
+      // Fungsi untuk navigasi halaman
+      function setupNavigation() {
+        const navLinks = document.querySelectorAll(".nav-link");
+        const pages = document.querySelectorAll(".page");
+
+        navLinks.forEach((link) => {
+          link.addEventListener("click", function (e) {
+            e.preventDefault();
+
+            // Hapus class active dari semua link dan page
+            navLinks.forEach((l) => l.classList.remove("active"));
+            pages.forEach((p) => p.classList.remove("active"));
+
+            // Tambah class active ke link yang diklik
+            this.classList.add("active");
+
+            // Tampilkan page yang sesuai
+            const pageId = this.getAttribute("data-page");
+            document.getElementById(pageId).classList.add("active");
+
+            // Update UI sesuai halaman
+            if (pageId === "dashboard") {
+              updateDashboard();
+            } else if (pageId === "pesanan") {
+              updatePesananPage();
+            } else if (pageId === "resep") {
+              updateResepPage();
+            } else if (pageId === "laporan") {
+              updateLaporanPage();
+            } else if (pageId === "users") {
+              updateUsersPage();
+            }
+          });
+        });
+      }
+
+      // Fungsi untuk memuat data resep dari Supabase
+      async function loadResepData() {
+        try {
+          const { data, error } = await supabase
+            .from("resep")
+            .select("*")
+            .order("nama_resep");
+
+          if (error) {
+            console.error("Error loading resep data:", error);
+            return;
+          }
+
+          resepData = data || [];
+          populateMenuDropdown();
+          updateDashboard();
+        } catch (error) {
+          console.error("Error in loadResepData:", error);
+        }
+      }
+
+      // Fungsi untuk memuat data pesanan dari Supabase
+      async function loadPesananData() {
+        try {
+          let query = supabase
+            .from("pesanan")
+            .select("*")
+            .order("tanggal", { ascending: false });
+
+          // Jika user adalah sekolah, hanya tampilkan pesanan miliknya
+          if (currentUserRole === "sekolah") {
+            query = query.eq("user_id", currentUser.id);
+          }
+
+          const { data, error } = await query;
+
+          if (error) {
+            console.error("Error loading pesanan data:", error);
+            return;
+          }
+
+          pesananData = data || [];
+          updateDashboard();
+          updatePesananPage();
+        } catch (error) {
+          console.error("Error in loadPesananData:", error);
+        }
+      }
+
+      // Fungsi untuk memuat data users dari Supabase
+      async function loadUsersData() {
+        try {
+          // Hanya admin yang bisa melihat data users
+          if (currentUserRole !== "admin") {
+            return;
+          }
+
+          const { data, error } = await supabase
+            .from("users")
+            .select("*")
+            .order("created_at", { ascending: false });
+
+          if (error) {
+            console.error("Error loading users data:", error);
+            return;
+          }
+
+          usersData = data || [];
+          updateUsersPage();
+        } catch (error) {
+          console.error("Error in loadUsersData:", error);
+        }
+      }
+
+      // Fungsi untuk mengisi dropdown menu dari data resep
+      function populateMenuDropdown() {
+        const menuSelect = document.getElementById("menu");
+        if (!menuSelect) return;
+        
+        menuSelect.innerHTML = '<option value="">Pilih Menu</option>';
+
+        resepData.forEach((resep) => {
+          const option = document.createElement("option");
+          option.value = resep.nama_resep;
+          option.textContent = resep.nama_resep;
+          menuSelect.appendChild(option);
+        });
+      }
+
+      // Fungsi untuk setup form resep dengan bahan dinamis
+      function setupResepForm() {
+        const bahanContainer = document.getElementById("bahan-container");
+        const btnTambahBahan = document.getElementById("btn-tambah-bahan");
+
+        // Fungsi untuk menambah input bahan
+        function tambahInputBahan(
+          bahan = { nama: "", jumlah: "", satuan: "" }
+        ) {
+          const div = document.createElement("div");
+          div.className = "form-row";
+          div.innerHTML = `
+                    <div class="form-group">
+                        <input type="text" class="bahan-nama" placeholder="Nama Bahan" value="${bahan.nama}" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="number" class="bahan-jumlah" placeholder="Jumlah" value="${bahan.jumlah}" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" class="bahan-satuan" placeholder="Satuan" value="${bahan.satuan}" required>
+                    </div>
+                    <div class="form-group">
+                        <button type="button" class="btn btn-danger btn-hapus-bahan">Hapus</button>
+                    </div>
+                `;
+
+          bahanContainer.appendChild(div);
+
+          // Event listener untuk tombol hapus
+          div
+            .querySelector(".btn-hapus-bahan")
+            .addEventListener("click", function () {
+              div.remove();
+            });
+        }
+
+        // Tambah bahan pertama saat load
+        if (bahanContainer) {
+          tambahInputBahan();
+        }
+
+        // Event listener untuk tombol tambah bahan
+        if (btnTambahBahan) {
+          btnTambahBahan.addEventListener("click", function () {
+            tambahInputBahan();
+          });
+        }
+
+        // Event listener untuk form resep
+        const resepForm = document.getElementById("resep-form");
+        if (resepForm) {
+          resepForm.addEventListener("submit", async function (e) {
+            e.preventDefault();
+
+            // Hanya admin yang bisa menambah/mengedit resep
+            if (currentUserRole !== "admin") {
+              alert("Hanya admin yang dapat menambah atau mengedit resep.");
+              return;
+            }
+
+            const namaResep = document.getElementById("nama-resep").value;
+            const catatanResep = document.getElementById("catatan-resep").value;
+
+            // Kumpulkan data bahan
+            const bahanRows = document.querySelectorAll(".form-row");
+            const bahan = [];
+
+            bahanRows.forEach((row) => {
+              const nama = row.querySelector(".bahan-nama").value;
+              const jumlah = parseFloat(
+                row.querySelector(".bahan-jumlah").value
+              );
+              const satuan = row.querySelector(".bahan-satuan").value;
+
+              if (nama && !isNaN(jumlah) && satuan) {
+                bahan.push({ nama, jumlah, satuan });
+              }
+            });
+
+            try {
+              if (editingResepId) {
+                // Update resep yang ada
+                const { error } = await supabase
+                  .from("resep")
+                  .update({
+                    nama_resep: namaResep,
+                    bahan: bahan,
+                    catatan: catatanResep,
+                  })
+                  .eq("id", editingResepId);
+
+                if (error) throw error;
+
+                alert("Resep berhasil diperbarui!");
+                editingResepId = null;
+              } else {
+                // Tambah resep baru
+                const { error } = await supabase.from("resep").insert([
+                  {
+                    nama_resep: namaResep,
+                    bahan: bahan,
+                    catatan: catatanResep,
+                    user_id: currentUser.id,
+                  },
+                ]);
+
+                if (error) throw error;
+
+                alert("Resep berhasil disimpan!");
+              }
+
+              // Reset form
+              this.reset();
+              bahanContainer.innerHTML = "";
+              tambahInputBahan();
+
+              // Reload data
+              await loadResepData();
+            } catch (error) {
+              console.error("Error saving resep:", error);
+              alert("Terjadi kesalahan saat menyimpan resep: " + error.message);
+            }
+          });
+        }
+
+        // Event listener untuk reset form resep
+        const btnResetResep = document.getElementById("btn-reset-resep");
+        if (btnResetResep) {
+          btnResetResep.addEventListener("click", function () {
+            document.getElementById("resep-form").reset();
+            bahanContainer.innerHTML = "";
+            tambahInputBahan();
+            editingResepId = null;
+          });
+        }
+      }
+
+      // Fungsi untuk setup form user
+      function setupUserForm() {
+        // Event listener untuk form register user
+        const registerUserForm = document.getElementById("register-user-form");
+        if (registerUserForm) {
+          registerUserForm.addEventListener("submit", async function (e) {
+            e.preventDefault();
+
+            // Hanya admin yang bisa menambah user
+            if (currentUserRole !== "admin") {
+              alert("Hanya admin yang dapat menambah user.");
+              return;
+            }
+
+            const email = document.getElementById("register-user-email").value;
+            const password = document.getElementById(
+              "register-user-password"
+            ).value;
+            const role = document.getElementById("register-user-role").value;
+
+            // Validasi email
+            if (!isValidEmail(email)) {
+              document.getElementById("register-user-message").textContent =
+                "Format email tidak valid.";
+              document.getElementById("register-user-message").style.color =
+                "red";
+              return;
+            }
+
+            try {
+              // Daftarkan user baru
+              const { data, error } = await supabase.auth.signUp({
+                email,
+                password,
+              });
+
+              if (error) throw error;
+
+              // Simpan role user ke tabel users
+              const { error: profileError } = await supabase
+                .from("users")
+                .upsert([{ id: data.user.id, email, role }]);
+
+              if (profileError) throw profileError;
+
+              document.getElementById("register-user-message").textContent =
+                "User berhasil didaftarkan!";
+              document.getElementById("register-user-message").style.color =
+                "green";
+
+              // Reset form
+              this.reset();
+
+              // Reload data users
+              await loadUsersData();
+            } catch (error) {
+              console.error("Error registering user:", error);
+              document.getElementById("register-user-message").textContent =
+                "Terjadi kesalahan: " + error.message;
+              document.getElementById("register-user-message").style.color =
+                "red";
+            }
+          });
+        }
+
+        // Event listener untuk reset form user
+        const btnResetUser = document.getElementById("btn-reset-user");
+        if (btnResetUser) {
+          btnResetUser.addEventListener("click", function () {
+            document.getElementById("register-user-form").reset();
+            document.getElementById("register-user-message").textContent = "";
+          });
+        }
+
+        function isValidEmail(email) {
+          const re =
+            /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+          return re.test(email);
+        }
+      }
+
+      // Fungsi untuk update dashboard yang dirombak
+      function updateDashboard() {
+        updateKPICards();
+        updateCharts();
+        updateRecentOrders();
+        updateActivityFeed();
+        updateQuickStats();
+      }
+
+      // Fungsi untuk mengupdate KPI Cards
+      function updateKPICards() {
+        const period = document.getElementById("periodFilter").value;
+        const today = new Date().toISOString().split("T")[0];
+        
+        let filteredPesanan = [];
+        
+        if (period === "today") {
+          filteredPesanan = pesananData.filter((p) => p.tanggal === today);
+        } else if (period === "week") {
+          const oneWeekAgo = new Date();
+          oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+          const oneWeekAgoString = oneWeekAgo.toISOString().split("T")[0];
+          filteredPesanan = pesananData.filter((p) => p.tanggal >= oneWeekAgoString);
+        } else if (period === "month") {
+          const oneMonthAgo = new Date();
+          oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+          const oneMonthAgoString = oneMonthAgo.toISOString().split("T")[0];
+          filteredPesanan = pesananData.filter((p) => p.tanggal >= oneMonthAgoString);
+        }
+
+        const totalSekolah = new Set(filteredPesanan.map((p) => p.sekolah)).size;
+        const totalPorsi = filteredPesanan.reduce((sum, p) => sum + p.porsi, 0);
+
+        // Hitung menu terlaris
+        const menuCount = {};
+        filteredPesanan.forEach((p) => {
+          menuCount[p.menu] = (menuCount[p.menu] || 0) + p.porsi;
+        });
+        const menuTerlaris =
+          Object.keys(menuCount).length > 0
+            ? Object.keys(menuCount).reduce((a, b) =>
+                menuCount[a] > menuCount[b] ? a : b
+              )
+            : "Tidak ada data";
+        
+        const menuPorsi = menuTerlaris !== "Tidak ada data" ? menuCount[menuTerlaris] : 0;
+
+        // Hitung total bahan
+        let totalBahan = 0;
+        let bahanJenis = 0;
+        
+        filteredPesanan.forEach(pesanan => {
+          const resep = resepData.find(r => r.nama_resep === pesanan.menu);
+          if (resep && Array.isArray(resep.bahan)) {
+            bahanJenis += resep.bahan.length;
+            resep.bahan.forEach(bahan => {
+              totalBahan += bahan.jumlah * pesanan.porsi;
+            });
+          }
+        });
+
+        document.getElementById("total-sekolah").textContent = totalSekolah;
+        document.getElementById("total-porsi").textContent = totalPorsi.toLocaleString();
+        document.getElementById("menu-terlaris").textContent = menuTerlaris;
+        document.getElementById("menu-porsi").textContent = `${menuPorsi} porsi`;
+        document.getElementById("total-bahan").textContent = Math.round(totalBahan).toLocaleString();
+        document.getElementById("bahan-jenis").textContent = `${bahanJenis} jenis`;
+      }
+
+      // Fungsi untuk mengupdate chart
+      function updateCharts() {
+        const period = document.getElementById("periodFilter").value;
+        let labels = [];
+        let data = [];
+        
+        if (period === "today") {
+          // Data per jam untuk hari ini
+          labels = [
+            "00:00", "01:00", "02:00", "03:00", "04:00", "05:00", 
+            "06:00", "07:00", "08:00", "09:00", "10:00", "11:00",
+            "12:00", "13:00", "14:00", "15:00", "16:00", "17:00",
+            "18:00", "19:00", "20:00", "21:00", "22:00", "23:00"
+          ];
+          
+          // Simulasi data untuk hari ini
+          data = labels.map(() => Math.floor(Math.random() * 100) + 50);
+        } else if (period === "week") {
+          // Data untuk 7 hari terakhir
+          const days = [];
+          for (let i = 6; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            days.push(date.toLocaleDateString('id-ID', { weekday: 'short' }));
+          }
+          labels = days;
+          
+          // Simulasi data untuk minggu ini
+          data = labels.map(() => Math.floor(Math.random() * 500) + 200);
+        } else if (period === "month") {
+          // Data untuk 4 minggu terakhir
+          labels = ["Minggu 1", "Minggu 2", "Minggu 3", "Minggu 4"];
+          
+          // Simulasi data untuk bulan ini
+          data = labels.map(() => Math.floor(Math.random() * 2000) + 1000);
+        }
+
+        // Chart produksi
+        if (produksiChart) produksiChart.destroy();
+        const produksiCtx = document
+          .getElementById("produksiChart")
+          .getContext("2d");
+        produksiChart = new Chart(produksiCtx, {
+          type: "line",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: "Jumlah Porsi",
+                data: data,
+                backgroundColor: "rgba(22, 163, 74, 0.1)",
+                borderColor: "#16a34a",
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: {
+                beginAtZero: true,
+              },
+            },
+            plugins: {
+              legend: {
+                display: false,
+              },
+            },
+          },
+        });
+      }
+
+      // Fungsi untuk mengupdate pesanan terbaru
+      function updateRecentOrders() {
+        const container = document.getElementById("recent-orders-list");
+        if (!container) return;
+        
+        const recentOrders = pesananData.slice(0, 5); // Ambil 5 pesanan terbaru
+        
+        container.innerHTML = "";
+        
+        if (recentOrders.length === 0) {
+          container.innerHTML = `<div style="text-align: center; color: var(--text-light); padding: 20px;">Tidak ada pesanan terbaru</div>`;
+          return;
+        }
+        
+        recentOrders.forEach((order, index) => {
+          const orderItem = document.createElement("div");
+          orderItem.className = "order-item";
+          orderItem.innerHTML = `
+            <div class="order-info">
+              <div class="order-school">${order.sekolah}</div>
+              <div class="order-details">${order.menu} • ${formatTanggal(order.tanggal)}</div>
+            </div>
+            <div class="order-porsi">${order.porsi} porsi</div>
+          `;
+          container.appendChild(orderItem);
+        });
+      }
+
+      // Fungsi untuk mengupdate aktivitas terbaru
+      function updateActivityFeed() {
+        const container = document.getElementById("activity-feed");
+        if (!container) return;
+        
+        // Buat data aktivitas dummy berdasarkan pesanan terbaru
+        const activities = [];
+        
+        // Aktivitas dari pesanan terbaru
+        pesananData.slice(0, 5).forEach(order => {
+          activities.push({
+            type: "pesanan",
+            description: `Pesanan baru dari ${order.sekolah}`,
+            time: order.tanggal,
+            icon: "📝"
+          });
+        });
+        
+        // Aktivitas sistem
+        activities.push({
+          type: "system",
+          description: "Laporan produksi telah dihasilkan",
+          time: new Date().toISOString().split("T")[0],
+          icon: "📊"
+        });
+        
+        activities.push({
+          type: "system",
+          description: "Pembaruan data sekolah",
+          time: new Date(Date.now() - 86400000).toISOString().split("T")[0],
+          icon: "🏫"
+        });
+        
+        container.innerHTML = "";
+        
+        activities.forEach(activity => {
+          const activityItem = document.createElement("div");
+          activityItem.className = "activity-item";
+          activityItem.innerHTML = `
+            <div class="activity-icon">${activity.icon}</div>
+            <div class="activity-details">
+              <div class="activity-description">${activity.description}</div>
+              <div class="activity-time">${formatTanggal(activity.time)}</div>
+            </div>
+          `;
+          container.appendChild(activityItem);
+        });
+      }
+
+      // Fungsi untuk mengupdate quick stats
+      function updateQuickStats() {
+        const today = new Date().toISOString().split("T")[0];
+        const pesananHariIni = pesananData.filter((p) => p.tanggal === today);
+        
+        const totalPorsi = pesananHariIni.reduce((sum, p) => sum + p.porsi, 0);
+        const totalSekolah = new Set(pesananHariIni.map((p) => p.sekolah)).size;
+        
+        const avgPorsi = totalSekolah > 0 ? Math.round(totalPorsi / totalSekolah) : 0;
+        const activeSchools = totalSekolah;
+        
+        // Hitung hari tersisa dalam bulan ini
+        const todayDate = new Date();
+        const lastDayOfMonth = new Date(todayDate.getFullYear(), todayDate.getMonth() + 1, 0);
+        const daysRemaining = lastDayOfMonth.getDate() - todayDate.getDate();
+        
+        // Hitung efisiensi (dummy calculation)
+        const efficiency = Math.min(100, Math.round((totalPorsi / 1000) * 100));
+        
+        document.getElementById("avg-porsi").textContent = avgPorsi;
+        document.getElementById("active-schools").textContent = activeSchools;
+        document.getElementById("days-remaining").textContent = daysRemaining;
+        document.getElementById("efficiency").textContent = `${efficiency}%`;
+      }
+
+      // Fungsi untuk update halaman pesanan
+      function updatePesananPage() {
+        updateTabelPesanan();
+      }
+
+      // Fungsi untuk mengupdate tabel pesanan
+      function updateTabelPesanan(filteredData = null) {
+        const tbody = document.getElementById("tbody-pesanan");
+        if (!tbody) return;
+        
+        tbody.innerHTML = "";
+
+        const dataToShow = filteredData || pesananData;
+
+        if (dataToShow.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align: center;">Tidak ada data pesanan</td></tr>`;
+          return;
+        }
+
+        dataToShow.forEach((pesanan, index) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${formatTanggal(pesanan.tanggal)}</td>
+                    <td>${pesanan.sekolah}</td>
+                    <td>${pesanan.menu}</td>
+                    <td>${pesanan.porsi}</td>
+                    <td class="action-buttons">
+                        <button class="btn btn-primary btn-small" onclick="editPesanan(${
+                          pesanan.id
+                        })">Edit</button>
+                        <button class="btn btn-danger btn-small" onclick="hapusPesanan(${
+                          pesanan.id
+                        })">Hapus</button>
+                    </td>
+                `;
+          tbody.appendChild(row);
+        });
+      }
+
+      // Fungsi untuk update halaman resep
+      function updateResepPage() {
+        updateTabelResep();
+      }
+
+      // Fungsi untuk mengupdate tabel resep
+      function updateTabelResep() {
+        const tbody = document.getElementById("tbody-resep");
+        if (!tbody) return;
+        
+        tbody.innerHTML = "";
+
+        if (resepData.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">Tidak ada data resep</td></tr>`;
+          return;
+        }
+
+        resepData.forEach((resep, index) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${resep.nama_resep}</td>
+                    <td>${
+                      Array.isArray(resep.bahan) ? resep.bahan.length : 0
+                    } bahan</td>
+                    <td>${
+                      resep.catatan
+                        ? resep.catatan.substring(0, 50) +
+                          (resep.catatan.length > 50 ? "..." : "")
+                        : ""
+                    }</td>
+                    <td class="action-buttons">
+                        <button class="btn btn-info btn-small" onclick="lihatResep(${
+                          resep.id
+                        })">Lihat</button>
+                        ${
+                          currentUserRole === "admin"
+                            ? `
+                            <button class="btn btn-primary btn-small" onclick="editResep(${resep.id})">Edit</button>
+                            <button class="btn btn-danger btn-small" onclick="hapusResep(${resep.id})">Hapus</button>
+                        `
+                            : ""
+                        }
+                    </td>
+                `;
+          tbody.appendChild(row);
+        });
+      }
+
+      // Fungsi untuk update halaman laporan
+      function updateLaporanPage() {
+        updateLaporanKPI();
+        updateTabelLaporan();
+        updateChartsLaporan();
+      }
+
+      // Fungsi untuk mengupdate KPI laporan
+      function updateLaporanKPI() {
+        // Hitung periode default (7 hari terakhir)
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 7);
+
+        const startDateString = startDate.toISOString().split("T")[0];
+        const endDateString = endDate.toISOString().split("T")[0];
+
+        const pesananPeriode = pesananData.filter((p) => {
+          return p.tanggal >= startDateString && p.tanggal <= endDateString;
+        });
+
+        const totalSekolah = new Set(pesananPeriode.map((p) => p.sekolah)).size;
+        const totalPorsi = pesananPeriode.reduce((sum, p) => sum + p.porsi, 0);
+        const hari =
+          Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+        const rataRata = hari > 0 ? Math.round(totalPorsi / hari) : 0;
+
+        document.getElementById("laporan-periode").textContent = `${hari} Hari`;
+        document.getElementById("laporan-total-sekolah").textContent =
+          totalSekolah;
+        document.getElementById("laporan-total-porsi").textContent =
+          totalPorsi.toLocaleString();
+        document.getElementById("laporan-ratarata").textContent =
+          rataRata.toLocaleString();
+      }
+
+      // Fungsi untuk mengupdate tabel laporan
+      function updateTabelLaporan() {
+        const tbody = document.getElementById("tbody-laporan");
+        if (!tbody) return;
+        
+        tbody.innerHTML = "";
+
+        // Kelompokkan pesanan per tanggal
+        const pesananPerTanggal = {};
+        pesananData.forEach((p) => {
+          if (!pesananPerTanggal[p.tanggal]) {
+            pesananPerTanggal[p.tanggal] = [];
+          }
+          pesananPerTanggal[p.tanggal].push(p);
+        });
+
+        // Buat baris untuk setiap tanggal
+        const dates = Object.keys(pesananPerTanggal).sort().reverse();
+
+        if (dates.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">Tidak ada data laporan</td></tr>`;
+          return;
+        }
+
+        dates.forEach((tanggal) => {
+          const pesananHariIni = pesananPerTanggal[tanggal];
+          const jumlahSekolah = new Set(pesananHariIni.map((p) => p.sekolah))
+            .size;
+          const totalPorsi = pesananHariIni.reduce(
+            (sum, p) => sum + p.porsi,
+            0
+          );
+          const rataSekolah =
+            jumlahSekolah > 0 ? Math.round(totalPorsi / jumlahSekolah) : 0;
+
+          // Hitung menu terpopuler
+          const menuCount = {};
+          pesananHariIni.forEach((p) => {
+            menuCount[p.menu] = (menuCount[p.menu] || 0) + p.porsi;
+          });
+          const menuTerpopuler =
+            Object.keys(menuCount).length > 0
+              ? Object.keys(menuCount).reduce((a, b) =>
+                  menuCount[a] > menuCount[b] ? a : b
+                )
+              : "Tidak ada data";
+
+          const row = document.createElement("tr");
+          row.innerHTML = `
+                    <td>${formatTanggal(tanggal)}</td>
+                    <td>${jumlahSekolah}</td>
+                    <td>${totalPorsi}</td>
+                    <td>${menuTerpopuler}</td>
+                    <td>${rataSekolah}</td>
+                `;
+          tbody.appendChild(row);
+        });
+      }
+
+      // Fungsi untuk mengupdate chart laporan
+      function updateChartsLaporan() {
+        // Data untuk tren produksi (7 hari terakhir)
+        const dates = [];
+        const totals = [];
+
+        for (let i = 6; i >= 0; i--) {
+          const date = new Date();
+          date.setDate(date.getDate() - i);
+          const dateString = date.toISOString().split("T")[0];
+
+          dates.push(formatTanggal(dateString));
+
+          const totalHariIni = pesananData
+            .filter((p) => p.tanggal === dateString)
+            .reduce((sum, p) => sum + p.porsi, 0);
+
+          totals.push(totalHariIni);
+        }
+
+        // Chart tren
+        if (trenChart) trenChart.destroy();
+        const trenCtx = document.getElementById("trenChart").getContext("2d");
+        trenChart = new Chart(trenCtx, {
+          type: "line",
+          data: {
+            labels: dates,
+            datasets: [
+              {
+                label: "Total Porsi per Hari",
+                data: totals,
+                borderColor: "#16a34a",
+                backgroundColor: "rgba(22, 163, 74, 0.1)",
+                borderWidth: 2,
+                fill: true,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: {
+                beginAtZero: true,
+              },
+            },
+          },
+        });
+
+        // Data untuk perbandingan menu (7 hari terakhir)
+        const menuComparison = {};
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 7);
+        const startDateString = startDate.toISOString().split("T")[0];
+
+        pesananData
+          .filter((p) => p.tanggal >= startDateString)
+          .forEach((p) => {
+            menuComparison[p.menu] = (menuComparison[p.menu] || 0) + p.porsi;
+          });
+
+        // Chart perbandingan
+        if (perbandinganChart) perbandinganChart.destroy();
+        const perbandinganCtx = document
+          .getElementById("perbandinganChart")
+          .getContext("2d");
+        perbandinganChart = new Chart(perbandinganCtx, {
+          type: "bar",
+          data: {
+            labels: Object.keys(menuComparison),
+            datasets: [
+              {
+                label: "Total Porsi (7 Hari)",
+                data: Object.values(menuComparison),
+                backgroundColor: [
+                  "#16a34a",
+                  "#22c55e",
+                  "#4ade80",
+                  "#86efac",
+                  "#bbf7d0",
+                ],
+                borderColor: [
+                  "#15803d",
+                  "#16a34a",
+                  "#22c55e",
+                  "#4ade80",
+                  "#86efac",
+                ],
+                borderWidth: 1,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: {
+                beginAtZero: true,
+              },
+            },
+          },
+        });
+      }
+
+      // Fungsi untuk update halaman users
+      function updateUsersPage() {
+        updateTabelUsers();
+      }
+
+      // Fungsi untuk mengupdate tabel users
+      function updateTabelUsers() {
+        const tbody = document.getElementById("tbody-users");
+        if (!tbody) return;
+        
+        tbody.innerHTML = "";
+
+        if (usersData.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">Tidak ada data user</td></tr>`;
+          return;
+        }
+
+        usersData.forEach((user, index) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${user.email}</td>
+                    <td>${user.role}</td>
+                    <td>${formatTanggal(user.created_at)}</td>
+                    <td class="action-buttons">
+                        <button class="btn btn-danger btn-small" onclick="hapusUser('${
+                          user.id
+                        }')">Hapus</button>
+                    </td>
+                `;
+          tbody.appendChild(row);
+        });
+      }
+
+      // Fungsi untuk setup filter laporan
+      function setupFilterLaporan() {
+        const btnGenerateLaporan = document.getElementById("btn-generate-laporan");
+        if (btnGenerateLaporan) {
+          btnGenerateLaporan.addEventListener("click", function () {
+            const tanggalAwal = document.getElementById(
+              "laporan-tanggal-awal"
+            ).value;
+            const tanggalAkhir = document.getElementById(
+              "laporan-tanggal-akhir"
+            ).value;
+
+            if (tanggalAwal && tanggalAkhir) {
+              // Filter data berdasarkan periode
+              const pesananPeriode = pesananData.filter((p) => {
+                return p.tanggal >= tanggalAwal && p.tanggal <= tanggalAkhir;
+              });
+
+              // Update KPI laporan
+              const totalSekolah = new Set(pesananPeriode.map((p) => p.sekolah))
+                .size;
+              const totalPorsi = pesananPeriode.reduce(
+                (sum, p) => sum + p.porsi,
+                0
+              );
+
+              const hari =
+                Math.ceil(
+                  (new Date(tanggalAkhir) - new Date(tanggalAwal)) /
+                    (1000 * 60 * 60 * 24)
+                ) + 1;
+              const rataRata = Math.round(totalPorsi / hari);
+
+              document.getElementById(
+                "laporan-periode"
+              ).textContent = `${hari} Hari`;
+              document.getElementById("laporan-total-sekolah").textContent =
+                totalSekolah;
+              document.getElementById("laporan-total-porsi").textContent =
+                totalPorsi.toLocaleString();
+              document.getElementById("laporan-ratarata").textContent =
+                rataRata.toLocaleString();
+
+              alert(
+                `Laporan untuk periode ${formatTanggal(
+                  tanggalAwal
+                )} hingga ${formatTanggal(tanggalAkhir)} telah dihasilkan.`
+              );
+            } else {
+              alert(
+                "Silahkan pilih tanggal awal dan tanggal akhir untuk generate laporan."
+              );
+            }
+          });
+        }
+      }
+
+      // Fungsi untuk menambah pesanan
+      async function tambahPesanan(event) {
+        event.preventDefault();
+
+        const sekolah = document.getElementById("sekolah").value;
+        const menu = document.getElementById("menu").value;
+        const porsi = parseInt(document.getElementById("porsi").value);
+        const tanggal = document.getElementById("tanggal").value;
+
+        try {
+          if (editingPesananId) {
+            // Update pesanan yang ada
+            const { error } = await supabase
+              .from("pesanan")
+              .update({
+                tanggal,
+                sekolah,
+                menu,
+                porsi,
+              })
+              .eq("id", editingPesananId);
+
+            if (error) throw error;
+
+            alert("Pesanan berhasil diperbarui!");
+            editingPesananId = null;
+          } else {
+            // Tambah pesanan baru
+            const { error } = await supabase.from("pesanan").insert([
+              {
+                tanggal,
+                sekolah,
+                menu,
+                porsi,
+                user_id: currentUser.id,
+              },
+            ]);
+
+            if (error) throw error;
+
+            alert("Pesanan berhasil disimpan!");
+          }
+
+          // Reset form
+          document.getElementById("pesanan-form").reset();
+          document.getElementById("tanggal").value = new Date()
+            .toISOString()
+            .split("T")[0];
+
+          // Reload data
+          await loadPesananData();
+        } catch (error) {
+          console.error("Error saving pesanan:", error);
+          alert("Terjadi kesalahan saat menyimpan pesanan: " + error.message);
+        }
+      }
+
+      // Fungsi untuk mengedit pesanan
+      async function editPesanan(id) {
+        const pesanan = pesananData.find((p) => p.id === id);
+        if (pesanan) {
+          // Cek apakah user memiliki akses untuk mengedit pesanan ini
+          if (
+            currentUserRole === "sekolah" &&
+            pesanan.user_id !== currentUser.id
+          ) {
+            alert("Anda hanya dapat mengedit pesanan milik sendiri.");
+            return;
+          }
+
+          document.getElementById("sekolah").value = pesanan.sekolah;
+          document.getElementById("menu").value = pesanan.menu;
+          document.getElementById("porsi").value = pesanan.porsi;
+          document.getElementById("tanggal").value = pesanan.tanggal;
+
+          editingPesananId = id;
+
+          alert(
+            "Pesanan sedang diedit. Silahkan perbarui data dan klik Simpan Pesanan."
+          );
+        }
+      }
+
+      // Fungsi untuk menghapus pesanan
+      async function hapusPesanan(id) {
+        const pesanan = pesananData.find((p) => p.id === id);
+
+        // Cek apakah user memiliki akses untuk menghapus pesanan ini
+        if (
+          currentUserRole === "sekolah" &&
+          pesanan.user_id !== currentUser.id
+        ) {
+          alert("Anda hanya dapat menghapus pesanan milik sendiri.");
+          return;
+        }
+
+        if (confirm("Apakah Anda yakin ingin menghapus pesanan ini?")) {
+          try {
+            const { error } = await supabase
+              .from("pesanan")
+              .delete()
+              .eq("id", id);
+
+            if (error) throw error;
+
+            await loadPesananData();
+            alert("Pesanan berhasil dihapus!");
+          } catch (error) {
+            console.error("Error deleting pesanan:", error);
+            alert("Terjadi kesalahan saat menghapus pesanan: " + error.message);
+          }
+        }
+      }
+
+      // Fungsi untuk menghapus user
+      async function hapusUser(userId) {
+        if (confirm("Apakah Anda yakin ingin menghapus user ini?")) {
+          try {
+            // Hapus dari tabel users
+            const { error } = await supabase
+              .from("users")
+              .delete()
+              .eq("id", userId);
+
+            if (error) throw error;
+
+            await loadUsersData();
+            alert("User berhasil dihapus!");
+          } catch (error) {
+            console.error("Error deleting user:", error);
+            alert("Terjadi kesalahan saat menghapus user: " + error.message);
+          }
+        }
+      }
+
+      // Fungsi untuk melihat resep
+      function lihatResep(id) {
+        const resep = resepData.find((r) => r.id === id);
+        if (resep) {
+          let bahanList = "Bahan-bahan:\n";
+          if (Array.isArray(resep.bahan)) {
+            resep.bahan.forEach((b) => {
+              bahanList += `- ${b.nama}: ${b.jumlah} ${b.satuan}\n`;
+            });
+          } else {
+            bahanList = "Tidak ada data bahan.";
+          }
+
+          alert(
+            `Resep: ${resep.nama_resep}\n\n${bahanList}\nCatatan: ${
+              resep.catatan || "Tidak ada catatan"
+            }`
+          );
+        }
+      }
+
+      // Fungsi untuk mengedit resep
+      async function editResep(id) {
+        // Hanya admin yang bisa mengedit resep
+        if (currentUserRole !== "admin") {
+          alert("Hanya admin yang dapat mengedit resep.");
+          return;
+        }
+
+        const resep = resepData.find((r) => r.id === id);
+        if (resep) {
+          document.getElementById("nama-resep").value = resep.nama_resep;
+          document.getElementById("catatan-resep").value = resep.catatan || "";
+
+          // Isi bahan
+          const bahanContainer = document.getElementById("bahan-container");
+          bahanContainer.innerHTML = "";
+
+          if (Array.isArray(resep.bahan)) {
+            resep.bahan.forEach((bahan) => {
+              tambahInputBahan(bahan);
+            });
+          } else {
+            tambahInputBahan();
+          }
+
+          editingResepId = id;
+
+          alert(
+            "Resep sedang diedit. Silahkan perbarui data dan klik Simpan Resep."
+          );
+        }
+      }
+
+      // Fungsi untuk menghapus resep
+      async function hapusResep(id) {
+        // Hanya admin yang bisa menghapus resep
+        if (currentUserRole !== "admin") {
+          alert("Hanya admin yang dapat menghapus resep.");
+          return;
+        }
+
+        if (confirm("Apakah Anda yakin ingin menghapus resep ini?")) {
+          try {
+            const { error } = await supabase
+              .from("resep")
+              .delete()
+              .eq("id", id);
+
+            if (error) throw error;
+
+            await loadResepData();
+            alert("Resep berhasil dihapus!");
+          } catch (error) {
+            console.error("Error deleting resep:", error);
+            alert("Terjadi kesalahan saat menghapus resep: " + error.message);
+          }
+        }
+      }
+
+      // Fungsi utilitas untuk format tanggal
+      function formatTanggal(dateString) {
+        const options = { day: "2-digit", month: "2-digit", year: "numeric" };
+        return new Date(dateString).toLocaleDateString("id-ID", options);
+      }
+
+      // Fungsi untuk menambah input bahan (digunakan dalam setupResepForm)
+      function tambahInputBahan(bahan = { nama: "", jumlah: "", satuan: "" }) {
+        const bahanContainer = document.getElementById("bahan-container");
+        const div = document.createElement("div");
+        div.className = "form-row";
+        div.innerHTML = `
+                <div class="form-group">
+                    <input type="text" class="bahan-nama" placeholder="Nama Bahan" value="${bahan.nama}" required>
+                </div>
+                <div class="form-group">
+                    <input type="number" class="bahan-jumlah" placeholder="Jumlah" value="${bahan.jumlah}" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <input type="text" class="bahan-satuan" placeholder="Satuan" value="${bahan.satuan}" required>
+                </div>
+                <div class="form-group">
+                    <button type="button" class="btn btn-danger btn-hapus-bahan">Hapus</button>
+                </div>
+            `;
+
+        bahanContainer.appendChild(div);
+
+        // Event listener untuk tombol hapus
+        div
+          .querySelector(".btn-hapus-bahan")
+          .addEventListener("click", function () {
+            div.remove();
+          });
+      }
+
+      // Fungsi untuk export data ke Excel
+      async function exportToExcel() {
+        try {
+          // Tampilkan loading state
+          const exportBtn = document.getElementById('exportExcelBtn');
+          const originalText = exportBtn.innerHTML;
+          exportBtn.innerHTML = 'Mengekspor...';
+          exportBtn.classList.add('btn-loading');
+          exportBtn.disabled = true;
+
+          // Siapkan data untuk export
+          let dataToExport = [];
+          
+          if (currentUserRole === 'admin') {
+            // Admin: export semua data pesanan
+            dataToExport = pesananData.map((pesanan, index) => ({
+              'No': index + 1,
+              'Tanggal': formatTanggal(pesanan.tanggal),
+              'Sekolah': pesanan.sekolah,
+              'Menu': pesanan.menu,
+              'Porsi': pesanan.porsi,
+              'ID User': pesanan.user_id
+            }));
+          } else {
+            // Sekolah: hanya data milik sendiri
+            dataToExport = pesananData
+              .filter(pesanan => pesanan.user_id === currentUser.id)
+              .map((pesanan, index) => ({
+                'No': index + 1,
+                'Tanggal': formatTanggal(pesanan.tanggal),
+                'Sekolah': pesanan.sekolah,
+                'Menu': pesanan.menu,
+                'Porsi': pesanan.porsi
+              }));
+          }
+
+          if (dataToExport.length === 0) {
+            alert('Tidak ada data pesanan untuk di-export.');
+            return;
+          }
+
+          // Buat workbook dan worksheet
+          const wb = XLSX.utils.book_new();
+          const ws = XLSX.utils.json_to_sheet(dataToExport);
+
+          // Styling untuk header
+          const headerStyle = {
+            font: { bold: true, color: { rgb: "FFFFFF" } },
+            fill: { fgColor: { rgb: "16A34A" } },
+            alignment: { horizontal: "center" }
+          };
+
+          // Apply style ke header
+          const range = XLSX.utils.decode_range(ws['!ref']);
+          for (let C = range.s.c; C <= range.e.c; ++C) {
+            const address = XLSX.utils.encode_cell({ r: 0, c: C });
+            if (!ws[address]) continue;
+            ws[address].s = headerStyle;
+          }
+
+          // Set column widths
+          const colWidths = [
+            { wch: 5 },   // No
+            { wch: 12 },  // Tanggal
+            { wch: 20 },  // Sekolah
+            { wch: 25 },  // Menu
+            { wch: 10 },  // Porsi
+            { wch: 30 }   // ID User (hanya untuk admin)
+          ];
+          ws['!cols'] = colWidths;
+
+          // Tambahkan worksheet ke workbook
+          XLSX.utils.book_append_sheet(wb, ws, 'Daftar Pesanan');
+
+          // Generate nama file
+          const timestamp = new Date().toISOString().slice(0, 10);
+          const fileName = `Daftar_Pesanan_${timestamp}.xlsx`;
+
+          // Export ke file
+          XLSX.writeFile(wb, fileName);
+
+          // Tampilkan konfirmasi
+          setTimeout(() => {
+            alert(`Data berhasil di-export! File: ${fileName}`);
+          }, 500);
+
+        } catch (error) {
+          console.error('Error exporting to Excel:', error);
+          alert('Terjadi kesalahan saat mengexport data: ' + error.message);
+        } finally {
+          // Reset button state
+          const exportBtn = document.getElementById('exportExcelBtn');
+          exportBtn.innerHTML = '📊 Export Excel';
+          exportBtn.classList.remove('btn-loading');
+          exportBtn.disabled = false;
+        }
+      }
+
+      // Fungsi untuk export dengan filter tanggal
+      async function exportFilteredExcel() {
+        const startDate = prompt('Masukkan tanggal mulai (YYYY-MM-DD):');
+        const endDate = prompt('Masukkan tanggal akhir (YYYY-MM-DD):');
+        
+        if (!startDate || !endDate) {
+          alert('Export dibatalkan. Harap masukkan kedua tanggal.');
+          return;
+        }
+
+        try {
+          const exportBtn = document.getElementById('exportExcelBtn');
+          exportBtn.innerHTML = 'Mengekspor...';
+          exportBtn.disabled = true;
+
+          // Filter data berdasarkan tanggal
+          const filteredData = pesananData.filter(pesanan => {
+            return pesanan.tanggal >= startDate && pesanan.tanggal <= endDate;
+          });
+
+          if (filteredData.length === 0) {
+            alert('Tidak ada data pesanan dalam rentang tanggal tersebut.');
+            return;
+          }
+
+          // Siapkan data untuk export
+          let dataToExport = filteredData.map((pesanan, index) => ({
+            'No': index + 1,
+            'Tanggal': formatTanggal(pesanan.tanggal),
+            'Sekolah': pesanan.sekolah,
+            'Menu': pesanan.menu,
+            'Porsi': pesanan.porsi,
+            ...(currentUserRole === 'admin' && { 'ID User': pesanan.user_id })
+          }));
+
+          // Buat workbook
+          const wb = XLSX.utils.book_new();
+          const ws = XLSX.utils.json_to_sheet(dataToExport);
+
+          // Styling
+          const range = XLSX.utils.decode_range(ws['!ref']);
+          for (let C = range.s.c; C <= range.e.c; ++C) {
+            const address = XLSX.utils.encode_cell({ r: 0, c: C });
+            if (!ws[address]) continue;
+            ws[address].s = {
+              font: { bold: true, color: { rgb: "FFFFFF" } },
+              fill: { fgColor: { rgb: "16A34A" } }
+            };
+          }
+
+          XLSX.utils.book_append_sheet(wb, ws, 'Pesanan Filtered');
+          
+          const timestamp = new Date().toISOString().slice(0, 10);
+          const fileName = `Pesanan_${startDate}_to_${endDate}.xlsx`;
+          
+          XLSX.writeFile(wb, fileName);
+          
+          setTimeout(() => {
+            alert(`Data berhasil di-export! File: ${fileName}`);
+          }, 500);
+
+        } catch (error) {
+          console.error('Error exporting filtered data:', error);
+          alert('Terjadi kesalahan saat mengexport data: ' + error.message);
+        } finally {
+          const exportBtn = document.getElementById('exportExcelBtn');
+          exportBtn.innerHTML = '📊 Export Excel';
+          exportBtn.disabled = false;
+        }
+      }
+
+      // Fungsi untuk setup tombol export
+      function setupExportButtons() {
+        const exportBtn = document.getElementById('exportExcelBtn');
+        if (exportBtn) {
+          // Hapus event listener lama
+          exportBtn.replaceWith(exportBtn.cloneNode(true));
+          
+          // Pasang event listener baru
+          document.getElementById('exportExcelBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Tampilkan pilihan export
+            if (currentUserRole === 'admin') {
+              const choice = confirm(
+                'Pilih jenis export:\n\nOK - Export Semua Data\nCancel - Export dengan Filter Tanggal'
+              );
+              
+              if (choice) {
+                exportToExcel();
+              } else {
+                exportFilteredExcel();
+              }
+            } else {
+              exportToExcel();
+            }
+          });
+          
+          // Tambahkan tooltip untuk admin
+          if (currentUserRole === 'admin') {
+            exportBtn.title = 'Klik untuk export semua data. Tahan untuk pilihan lainnya.';
+          }
+        }
+      }
+
+      // Inisialisasi saat halaman dimuat
+      document.addEventListener("DOMContentLoaded", function () {
+        console.log('DOM Content Loaded - Memulai inisialisasi aplikasi');
+        
+        // Event listener untuk form pesanan
+        const pesananForm = document.getElementById("pesanan-form");
+        if (pesananForm) {
+          pesananForm.addEventListener("submit", tambahPesanan);
+        }
+        
+        const btnResetPesanan = document.getElementById("btn-reset-pesanan");
+        if (btnResetPesanan) {
+          btnResetPesanan.addEventListener("click", function () {
+            document.getElementById("pesanan-form").reset();
+            document.getElementById("tanggal").value = new Date()
+              .toISOString()
+              .split("T")[0];
+            editingPesananId = null;
+          });
+        }
+
+        // Inisialisasi aplikasi
+        initApp();
+      });
+
+      // Export fungsi ke global scope agar bisa diakses dari HTML
+      window.editPesanan = editPesanan;
+      window.hapusPesanan = hapusPesanan;
+      window.hapusUser = hapusUser;
+      window.lihatResep = lihatResep;
+      window.editResep = editResep;
+      window.hapusResep = hapusResep;
+      window.tambahInputBahan = tambahInputBahan;
+    </script>
+
+    <!-- tombol copy -->
+    <script>
+      (function () {
+        function fallbackCopyTextToClipboard(text) {
+          var textArea = document.createElement("textarea");
+          textArea.value = text;
+          // avoid scrolling to bottom
+          textArea.style.position = "fixed";
+          textArea.style.top = "-9999px";
+          document.body.appendChild(textArea);
+          textArea.focus();
+          textArea.select();
+          try {
+            var successful = document.execCommand("copy");
+            document.body.removeChild(textArea);
+            return successful;
+          } catch (err) {
+            document.body.removeChild(textArea);
+            return false;
+          }
+        }
+
+        function copyText(text) {
+          if (!text) return Promise.reject("no text");
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(text);
+          } else {
+            // fallback to execCommand
+            return new Promise(function (resolve, reject) {
+              var ok = fallbackCopyTextToClipboard(text);
+              ok ? resolve() : reject();
+            });
+          }
+        }
+
+        var buttons = document.querySelectorAll(".copy-btn");
+        buttons.forEach(function (btn) {
+          btn.addEventListener("click", function (e) {
+            // find nearest sibling .cred text (safe approach)
+            var p = btn.closest("p");
+            var cred = p ? p.querySelector(".cred") : null;
+            var value = cred
+              ? cred.textContent.trim()
+              : btn.getAttribute("data-copy") || "";
+            if (!value) return;
+            copyText(value)
+              .then(function () {
+                showToast("Copied!");
+              })
+              .catch(function () {
+                showToast("Copy failed");
+              });
+            // optional: visual feedback on button
+            btn.classList.add("copied");
+            setTimeout(function () {
+              btn.classList.remove("copied");
+            }, 900);
+          });
+        });
+
+        // toast
+        var toast = document.getElementById("copy-toast");
+        var toastTimer;
+        function showToast(msg) {
+          if (!toast) return;
+          toast.textContent = msg;
+          toast.classList.add("show");
+          clearTimeout(toastTimer);
+          toastTimer = setTimeout(function () {
+            toast.classList.remove("show");
+          }, 1400);
+        }
+      })();
+    </script>
+  </body>
+</html>
